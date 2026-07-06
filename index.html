@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Закупка V-Bucks — калькулятор</title>
+<title>Калькулятор закупки — V-Bucks / RL / DBD</title>
 <style>
   :root{
     --bg:#0b0e14; --panel:#141922; --surface:#1b212c; --surface2:#232b38; --border:#2b3441;
@@ -19,10 +19,30 @@
   .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
   .app{max-width:1080px;margin:0 auto}
 
-  header{margin-bottom:22px;display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+  header{margin-bottom:22px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+  .head-left{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
   h1{font-size:23px;font-weight:650;letter-spacing:-0.02em;display:flex;align-items:center;gap:10px}
   h1 .dot{width:10px;height:10px;border-radius:3px;background:var(--accent);box-shadow:0 0 14px var(--accent);flex:none}
-  .sub{color:var(--muted);font-size:13px;max-width:560px}
+  .sub{color:var(--muted);font-size:13px;max-width:420px}
+
+  .settings-pill{display:flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--border);
+    border-radius:11px;padding:9px 14px;cursor:pointer;color:var(--muted);font-family:var(--mono);font-size:12.5px;
+    transition:border-color .15s;white-space:nowrap}
+  .settings-pill:hover{border-color:var(--accent);color:var(--text)}
+  .settings-pill .gear{font-size:15px;filter:grayscale(1);opacity:.8}
+  .settings-pill b{color:var(--money);font-weight:600}
+
+  .modal-back{position:fixed;inset:0;background:rgba(5,8,13,.72);backdrop-filter:blur(3px);
+    display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
+  .modal-back.open{display:flex}
+  .modal{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:20px;
+    width:100%;max-width:420px;box-shadow:0 24px 70px rgba(0,0,0,.55);animation:pop .16s ease}
+  @keyframes pop{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+  .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+  .modal-title{font-size:15px;font-weight:650}
+  .modal-x{background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--muted);
+    width:30px;height:30px;font-size:19px;line-height:1;cursor:pointer;transition:all .12s;flex:none}
+  .modal-x:hover{color:var(--text);border-color:var(--accent)}
 
   .grid{display:grid;grid-template-columns:376px 1fr;gap:18px;align-items:start}
   @media(max-width:880px){.grid{grid-template-columns:1fr}}
@@ -36,6 +56,12 @@
   label{display:block;font-size:11.5px;font-weight:600;color:var(--muted);
     text-transform:uppercase;letter-spacing:0.05em;margin-bottom:9px}
 
+  .curr-tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:4px}
+  .ctab{flex:1;background:transparent;border:none;color:var(--muted);font-family:var(--ui);
+    font-size:13px;font-weight:600;padding:10px 6px;border-radius:8px;cursor:pointer;transition:all .12s}
+  .ctab:hover{color:var(--text)}
+  .ctab.on{background:var(--accent);color:#0b0e14}
+
   .field{position:relative}
   input[type=number]{width:100%;background:var(--surface);border:1px solid var(--border);
     border-radius:11px;color:var(--text);font-family:var(--mono);font-size:22px;font-weight:600;
@@ -43,7 +69,7 @@
   input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
   input:hover{border-color:#38424f}
   input:focus{border-color:var(--accent);background:var(--surface2)}
-  .suffix{position:absolute;right:15px;top:50%;transform:translateY(-50%);color:var(--faint);font-family:var(--mono);font-size:15px;pointer-events:none}
+  .suffix{position:absolute;right:15px;top:50%;transform:translateY(-50%);color:var(--faint);font-family:var(--mono);font-size:14px;pointer-events:none}
 
   .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
   .chip{background:var(--surface);border:1px solid var(--border);border-radius:7px;color:var(--muted);
@@ -61,12 +87,11 @@
   .rate-note b{color:var(--money);font-weight:600}
   .rate-note .sep{color:var(--profit);font-weight:600}
 
-  /* ---------- results ---------- */
   .results{min-height:200px}
   .res-pad{padding:20px}
   .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;
     min-height:340px;color:var(--faint);font-size:14px;text-align:center;gap:10px;padding:20px}
-  .empty .big{font-size:40px;opacity:.5}
+  .empty .big{font-size:38px;opacity:.5;font-family:var(--mono)}
 
   .headline{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
   .stat-big{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:16px 17px}
@@ -135,18 +160,29 @@
 <body>
 <div class="app">
   <header>
-    <h1><span class="dot"></span>Закупка V-Bucks</h1>
-    <div class="sub">Слева задай сумму, баланс клиента и курсы — справа получишь правильные шаги покупки, себестоимость и цену.</div>
+    <div class="head-left">
+      <h1><span class="dot"></span>Калькулятор закупки</h1>
+      <div class="sub">V-Bucks · Rocket League · Dead by Daylight</div>
+    </div>
+    <button class="settings-pill" id="settingsBtn"><span class="gear">⚙</span><span id="pillSummary"></span></button>
   </header>
 
   <div class="grid">
-    <!-- ЛЕВАЯ ПАНЕЛЬ -->
     <aside class="panel controls">
       <section class="block">
-        <label>Сколько V-Bucks нужно</label>
+        <label>Валюта</label>
+        <div class="curr-tabs">
+          <button class="ctab on" data-c="vb">V-Bucks</button>
+          <button class="ctab" data-c="rl">RL Credits</button>
+          <button class="ctab" data-c="dbd">DBD Cells</button>
+        </div>
+      </section>
+
+      <section class="block">
+        <label id="tgtLabel">Сколько V-Bucks нужно</label>
         <div class="field">
-          <input type="number" id="target" inputmode="numeric" placeholder="2000" min="50" step="50">
-          <span class="suffix">VB</span>
+          <input type="number" id="target" inputmode="numeric" placeholder="2000" min="10" step="50">
+          <span class="suffix" id="tgtSuffix">VB</span>
         </div>
         <div class="chips" id="chips"></div>
       </section>
@@ -159,49 +195,73 @@
         </div>
         <div class="hint">Если на аккаунте уже лежат лиры — впиши. Солвер потратит их в дело и пересоберёт шаги, чтобы не вылез лишний платный шаг.</div>
       </section>
-
-      <section class="block">
-        <label>Курсы и параметры</label>
-        <div class="rates-grid">
-          <div class="mini"><label>Доллар, ₽</label><input type="number" id="rUsd" value="83.5" step="0.1"></div>
-          <div class="mini"><label>Лира за $</label><input type="number" id="rLira" value="48" step="0.5"></div>
-          <div class="mini"><label>Привязка, ₽/шаг</label><input type="number" id="pAttach" value="50" step="1"></div>
-          <div class="mini"><label>Маржа, ₽/шаг</label><input type="number" id="pProfit" value="250" step="10"></div>
-          <div class="mini" style="grid-column:1/-1"><label>Комиссия банка за транзакцию, %</label><input type="number" id="pComm" value="8" step="0.5"></div>
-        </div>
-        <div class="rate-note" id="rateNote"></div>
-      </section>
     </aside>
 
-    <!-- ПРАВАЯ ПАНЕЛЬ -->
     <main class="panel results" id="out"></main>
   </div>
 
-  <section class="panel bundles-panel">
+  <section class="panel bundles-panel" id="bundlesPanel">
     <div class="bundles-head">Готовые паки Fortnite · себес и цена при текущих курсах</div>
     <div id="bundles"></div>
   </section>
 
   <div class="foot">
-    <b>Как считает:</b> кешбек 20% с суммы, оплаченной картой, тратится на следующую покупку. Пак «чуть меньше цели» + бесплатный хвост кешбеком = 1 платный шаг. Платный шаг = 1 активация карты + привязка + транзакция (банк снимает комиссию). Бесплатные шаги карту не трогают — комиссии нет. <b>Себестоимость</b> = лиры с карты × курс × (1 + комиссия банка) + привязка (твои затраты). <b>Цена клиенту</b> = себестоимость + маржа за каждый платный шаг (за сколько продаёшь). Разница = прибыль. Внутри — направленный поиск A*, возвращает минимальную по цене цепочку.
+    <b>Как считает:</b> кешбек 20% с суммы, оплаченной картой, тратится на следующую покупку. Пак «чуть меньше цели» + бесплатный хвост кешбеком = 1 платный шаг. Платный шаг = 1 активация карты + привязка + транзакция (банк снимает комиссию). Бесплатные шаги карту не трогают. <b>Себестоимость</b> = валюта с карты × курс × (1 + комиссия банка) + привязка (твои затраты). <b>Цена клиенту</b> = себестоимость + маржа за каждый платный шаг. Разница = прибыль. Внутри — направленный поиск A*, обходит ценовые ловушки магазина и возвращает минимальную по цене цепочку.
+  </div>
+
+  <div class="modal-back" id="settingsModal">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="modal-title">Курсы и параметры</div>
+        <button class="modal-x" id="modalClose">×</button>
+      </div>
+      <div class="rates-grid">
+        <div class="mini"><label>Доллар, ₽</label><input type="number" id="rUsd" value="83.5" step="0.1"></div>
+        <div class="mini"><label>Лира за $</label><input type="number" id="rLira" value="48" step="0.5"></div>
+        <div class="mini"><label>Привязка, ₽/шаг</label><input type="number" id="pAttach" value="50" step="1"></div>
+        <div class="mini"><label>Маржа, ₽/шаг</label><input type="number" id="pProfit" value="300" step="10"></div>
+        <div class="mini" style="grid-column:1/-1"><label>Комиссия банка за транзакцию, %</label><input type="number" id="pComm" value="8" step="0.5"></div>
+      </div>
+      <div class="rate-note" id="rateNote"></div>
+    </div>
   </div>
 </div>
 
 <script>
-// ---------- таблица паков магазина (VB -> цена ₺) ----------
-const FULL=[[50,21],[100,42],[150,63],[200,84],[250,105],[300,126],[350,148],[400,169],[450,179],[500,179],[550,179],[600,179],[650,179],[700,179],[750,179],[800,190],[850,211],[900,232],[950,253],[1050,295],[1100,316],[1150,337],[1200,359],[1250,380],[1300,401],[1350,422],[1400,443],[1450,464],[1500,475],[1550,475],[1600,475],[1650,475],[1700,475],[1750,475],[1800,475],[1850,475],[1900,475],[1950,475],[2000,475],[2050,475],[2100,475],[2150,475],[2200,475],[2250,475],[2300,475],[2350,475],[2400,485],[2450,506],[2500,527],[2550,548],[2600,569],[2650,590],[2700,611],[2750,632],[2850,675],[2900,696],[2950,717],[3000,738],[3050,759],[3100,770],[3200,770],[3300,770],[3400,770],[3500,770],[3600,770],[3700,770],[3800,770],[3900,770],[4000,770],[4100,770],[4200,770],[4300,770],[4400,770],[4450,770],[4500,780],[4550,801],[4600,822],[4650,843],[4700,864],[4750,885],[4800,906],[4850,927],[4900,948],[4950,969],[12500,1898]];
-const bb={};
-for(const [vb,t] of FULL){ if(bb[vb]===undefined||t<bb[vb]) bb[vb]=t; }
-const byprice={};
-for(const vb in bb){ const t=bb[vb]; if(byprice[t]===undefined||+vb>byprice[t]) byprice[t]=+vb; }
-const redSet=new Set();
-for(const t in byprice) redSet.add(byprice[t]+','+t);
-for(const ex of [500,1500,1600,1800,1900,2000,2100,3100,3200,3800]) redSet.add(ex+','+bb[ex]);
-const PACKS=[...redSet].map(s=>s.split(',').map(Number)).sort((a,b)=>a[0]-b[0]);
-const MAXEFF=12500/1898;
-const PRODUCTS=[200,300,500,800,1000,1200,1300,1500,1600,1800,1900,2000,2100,2400,2600,2800,3200,3800,4500,5000,5300,5600,6000,6900,7800,9000,10000,12500,13500,25000,27000,37500,40500];
+// ================= СЕТКИ ПАКОВ =================
+// V-Bucks (VB -> ₺)
+const VB_RAW=[[50,21],[100,42],[150,63],[200,84],[250,105],[300,126],[350,148],[400,169],[450,179],[500,179],[550,179],[600,179],[650,179],[700,179],[750,179],[800,190],[850,211],[900,232],[950,253],[1050,295],[1100,316],[1150,337],[1200,359],[1250,380],[1300,401],[1350,422],[1400,443],[1450,464],[1500,475],[1550,475],[1600,475],[1650,475],[1700,475],[1750,475],[1800,475],[1850,475],[1900,475],[1950,475],[2000,475],[2050,475],[2100,475],[2150,475],[2200,475],[2250,475],[2300,475],[2350,475],[2400,485],[2450,506],[2500,527],[2550,548],[2600,569],[2650,590],[2700,611],[2750,632],[2850,675],[2900,696],[2950,717],[3000,738],[3050,759],[3100,770],[3200,770],[3300,770],[3400,770],[3500,770],[3600,770],[3700,770],[3800,770],[3900,770],[4000,770],[4100,770],[4200,770],[4300,770],[4400,770],[4450,770],[4500,780],[4550,801],[4600,822],[4650,843],[4700,864],[4750,885],[4800,906],[4850,927],[4900,948],[4950,969],[12500,1898]];
+// Rocket League Credits (cr -> ₺) — с ценовыми аномалиями магазина
+const RL_RAW={50:10,100:21,150:31,200:42,250:52,300:63,350:73,400:84,450:94,500:105,900:172,1000:182,1100:211,1200:211,1400:211,1600:211,1800:211,2000:211,2100:211,2300:211,2400:211,2500:211,2800:211,2900:211,2950:211,3000:528,3200:240,3500:319,3800:397,3900:417,6500:1056};
+// DBD Auric Cells (клетки -> ₺)
+const DBD_RAW={500:124,1100:299,2250:599,4025:1049,6000:1299,12500:2599};
 
-// ---------- min-heap ----------
+// редуцируем VB (по 1 паку на цену + точные товары) для скорости; RL/DBD берём полностью
+function reducePacks(raw, exacts){
+  const arr=Array.isArray(raw)?raw:Object.entries(raw).map(([k,v])=>[+k,v]);
+  const bb={}; for(const [v,t] of arr){ if(bb[v]===undefined||t<bb[v]) bb[v]=t; }
+  const byprice={}; for(const v in bb){ const t=bb[v]; if(byprice[t]===undefined||+v>byprice[t]) byprice[t]=+v; }
+  const s=new Set(); for(const t in byprice) s.add(byprice[t]+','+t);
+  for(const ex of exacts){ if(bb[ex]!==undefined) s.add(ex+','+bb[ex]); }
+  return [...s].map(x=>x.split(',').map(Number)).sort((a,b)=>a[0]-b[0]);
+}
+const maxEff=packs=>Math.max(...packs.map(p=>p[0]/p[1]));
+
+const PACKS_VB=reducePacks(VB_RAW,[500,1500,1600,1800,1900,2000,2100,3100,3200,3800]);
+const PACKS_RL=reducePacks(RL_RAW,[500,1100,3000,6500]);   // плато 1100-2950 схлопнуто до 2950 + точный 1100
+const PACKS_DBD=reducePacks(DBD_RAW,[]);
+
+const CURR={
+  vb:{name:'V-Bucks', unit:'VB', packs:PACKS_VB, maxeff:maxEff(PACKS_VB),
+      chips:[200,300,500,800,1000,1200,1300,1500,1600,1800,1900,2000,2100,2400,2600,2800,3200,3800,4500,5000,5300,5600,6000,6900,7800,9000,10000,12500,13500,25000,27000,37500,40500], bundles:true},
+  rl:{name:'RL Credits', unit:'cr', packs:PACKS_RL, maxeff:maxEff(PACKS_RL),
+      chips:[500,700,1100,3000,6500,15000], bundles:false},
+  dbd:{name:'DBD Cells', unit:'клеток', packs:PACKS_DBD, maxeff:maxEff(PACKS_DBD),
+      chips:[500,1100,2250,4025,6000,12500], bundles:false},
+};
+let CUR='vb';
+
+// ================= MIN-HEAP =================
 class MinHeap{
   constructor(){this.a=[];}
   isEmpty(){return this.a.length===0;}
@@ -216,9 +276,9 @@ class MinHeap{
 }
 const r1=x=>Math.round(x*10)/10;
 
-// ---------- солвер A* ----------
+// ================= СОЛВЕР A* =================
 const EPS_OVER=0.001,EPS_PK=0.0001;
-function solve(target,bal,STEP_PEN,over=1200,depth=25,maxnodes=2000000){
+function solve(target,bal,STEP_PEN,PACKS,MAXEFF,over=1500,depth=28,maxnodes=2000000){
   if(!(target>0)) return null;
   const h=(vb,cb,b)=>{const need=target-vb;return need<=0?0:Math.max(0,need/MAXEFF-(cb+b));};
   const heap=new MinHeap();let order=0;
@@ -254,29 +314,44 @@ function solve(target,bal,STEP_PEN,over=1200,depth=25,maxnodes=2000000){
   return null;
 }
 
-// ---------- UI ----------
+// ================= UI =================
 const $=id=>document.getElementById(id);
 const fmt=n=>Math.round(n).toLocaleString('ru-RU');
 const fmt1=n=>(Math.round(n*10)/10).toLocaleString('ru-RU');
 
-const chipsBox=$('chips');
-PRODUCTS.forEach(p=>{
-  const c=document.createElement('div');
-  c.className='chip';c.textContent=p>=1000?(p/1000)+'k':p;c.dataset.v=p;
-  c.onclick=()=>{$('target').value=p;calc();};
-  chipsBox.appendChild(c);
-});
+function buildChips(){
+  const box=$('chips'); box.innerHTML='';
+  CURR[CUR].chips.forEach(p=>{
+    const c=document.createElement('div');
+    c.className='chip'; c.textContent=p>=1000?(p/1000)+'k':p; c.dataset.v=p;
+    c.onclick=()=>{$('target').value=p;calc();};
+    box.appendChild(c);
+  });
+}
+function switchCurr(c){
+  CUR=c;
+  document.querySelectorAll('.ctab').forEach(b=>b.classList.toggle('on',b.dataset.c===c));
+  $('tgtLabel').textContent='Сколько '+CURR[c].name+' нужно';
+  $('tgtSuffix').textContent=CURR[c].unit;
+  $('bundlesPanel').style.display=CURR[c].bundles?'':'none';
+  buildChips();
+  calc();
+}
+document.querySelectorAll('.ctab').forEach(b=>b.onclick=()=>switchCurr(b.dataset.c));
 
 function rate(){return (+$('rUsd').value)/(+$('rLira').value);}
 function updateRateNote(){
-  const rt=rate();
-  $('rateNote').innerHTML=`<span>1 ₺ = <b>${(Math.round(rt*10000)/10000)}</b> ₽</span><span class="sep">шаг +${Math.round((+$('pAttach').value)+(+$('pProfit').value))} ₽</span>`;
+  const rt=rate(), rt4=Math.round(rt*10000)/10000;
+  const step=Math.round((+$('pAttach').value)+(+$('pProfit').value));
+  const comm=(+$('pComm').value)||0;
+  $('rateNote').innerHTML=`<span>1 ₺ = <b>${rt4}</b> ₽</span><span class="sep">шаг +${step} ₽</span>`;
+  const ps=$('pillSummary'); if(ps) ps.innerHTML=`1 ₺ = <b>${rt4}</b> ₽ · +${step} ₽/шаг · ${comm}%`;
 }
 function markChip(){
   const v=+$('target').value;
   document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',+c.dataset.v===v));
 }
-function stepRow(vb,card,cbEarned){
+function stepRow(vb,card,cbEarned,unit){
   const free=card<=0.005;
   const payHtml=free
     ? `<span class="free-tag">FREE · кешбек</span>`
@@ -284,16 +359,40 @@ function stepRow(vb,card,cbEarned){
   return `<div class="step ${free?'free':''}">
       <div class="idx">${free?'✓':'₺'}</div>
       <div class="body">
-        <div class="vb">${fmt(vb)}<span> VB</span></div>
+        <div class="vb">${fmt(vb)}<span> ${unit}</span></div>
         <div class="pay">${payHtml}</div>
       </div></div>`;
 }
-
 function emptyState(){
-  $('out').innerHTML=`<div class="empty"><div class="big">₺→VB</div><div>Задай сумму V-Bucks слева —<br>покажу шаги, себестоимость и цену.</div></div>`;
+  const u=CURR[CUR].name;
+  $('out').innerHTML=`<div class="empty"><div class="big">₺→${CURR[CUR].unit}</div><div>Задай сумму ${u} слева —<br>покажу шаги, себестоимость и цену.</div></div>`;
 }
 
-function render(res,resBase,target,bal,rateEff,comm,attach,profit){
+// ---- готовые паки Fortnite (фикс-цена, 1 транзакция) ----
+const BUNDLES=[
+  {name:'Minty Legends Pack', tr:632, vb:1000},
+  {name:'Summer Legends Pack', tr:422, vb:0},
+  {name:'The Ace Pack', tr:190, vb:800},
+  {name:'Operation Brite Starter Pack', tr:105, vb:0},
+];
+function renderBundles(rateEff,attach,profit){
+  const rows=BUNDLES.map(b=>{
+    const cost=Math.round(b.tr*rateEff+attach);
+    const price=Math.round(cost+profit);
+    const vbNote=b.vb>0?`<div class="bvb">внутри ${fmt(b.vb)} VB</div>`:'';
+    return `<tr>
+      <td><div class="bname">${b.name}</div>${vbNote}</td>
+      <td class="r lira">${b.tr} ₺</td>
+      <td class="r cost">${fmt(cost)} ₽</td>
+      <td class="r price">${fmt(price)} ₽</td>
+    </tr>`;
+  }).join('');
+  $('bundles').innerHTML=`<table class="btable">
+    <thead><tr><th>Пак</th><th class="r">Лира</th><th class="r">Себес</th><th class="r">Цена</th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+}
+
+function render(res,resBase,target,bal,rateEff,comm,attach,profit,unit){
   const out=$('out');
   if(!res){out.innerHTML=`<div class="empty"><div class="big">✕</div><div>Не удалось собрать цепочку для этой суммы.</div></div>`;return;}
   const {chain,steps,cardTRY,vb}=res;
@@ -307,7 +406,7 @@ function render(res,resBase,target,bal,rateEff,comm,attach,profit){
     const [pvb,card]=pair;
     const cbEarned=Math.round(card*0.2*10)/10;
     if(i>0) flow+=`<div class="connector"><div class="line"></div></div>`;
-    flow+=stepRow(pvb,card,cbEarned);
+    flow+=stepRow(pvb,card,cbEarned,unit);
   });
 
   let noteHtml='';
@@ -343,51 +442,34 @@ function render(res,resBase,target,bal,rateEff,comm,attach,profit){
     </div>`;
 }
 
-// ---------- готовые паки (фикс-цена, 1 транзакция) ----------
-const BUNDLES=[
-  {name:'Minty Legends Pack', tr:632, vb:1000},
-  {name:'Summer Legends Pack', tr:422, vb:0},
-  {name:'The Ace Pack', tr:190, vb:800},
-  {name:'Operation Brite Starter Pack', tr:105, vb:0},
-];
-function renderBundles(rateEff,attach,profit){
-  const rows=BUNDLES.map(b=>{
-    const cost=Math.round(b.tr*rateEff+attach);   // 1 транзакция = 1 привязка + комиссия
-    const price=Math.round(cost+profit);
-    const vbNote=b.vb>0?`<div class="bvb">внутри ${fmt(b.vb)} VB</div>`:'';
-    return `<tr>
-      <td><div class="bname">${b.name}</div>${vbNote}</td>
-      <td class="r lira">${b.tr} ₺</td>
-      <td class="r cost">${fmt(cost)} ₽</td>
-      <td class="r price">${fmt(price)} ₽</td>
-    </tr>`;
-  }).join('');
-  $('bundles').innerHTML=`<table class="btable">
-    <thead><tr><th>Пак</th><th class="r">Лира</th><th class="r">Себес</th><th class="r">Цена</th></tr></thead>
-    <tbody>${rows}</tbody></table>`;
-}
-
 let timer=null;
 function calc(){
   markChip();
   updateRateNote();
+  const cfg=CURR[CUR];
   const attach=+$('pAttach').value, profit=+$('pProfit').value;
   const comm=Math.max(0,(+$('pComm').value)||0);
   const rt=rate();
-  const rateEff=rt*(1+comm/100);           // лира по карте дороже на комиссию банка
-  renderBundles(rateEff,attach,profit);    // паки считаем всегда
-  const STEP_PEN=(attach+profit)/rateEff;  // порог дробления с учётом комиссии
+  const rateEff=rt*(1+comm/100);
+  if(cfg.bundles) renderBundles(rateEff,attach,profit);
+  const STEP_PEN=(attach+profit)/rateEff;
   const target=parseInt($('target').value,10);
   const bal=Math.max(0,parseFloat($('balance').value)||0);
   if(!(target>0)){emptyState();return;}
-  const res=solve(target,bal,STEP_PEN);
-  const resBase=bal>0?solve(target,0,STEP_PEN):null;
-  render(res,resBase,target,bal,rateEff,comm,attach,profit);
+  const res=solve(target,bal,STEP_PEN,cfg.packs,cfg.maxeff);
+  const resBase=bal>0?solve(target,0,STEP_PEN,cfg.packs,cfg.maxeff):null;
+  render(res,resBase,target,bal,rateEff,comm,attach,profit,cfg.unit);
 }
 function debounced(){clearTimeout(timer);timer=setTimeout(calc,160);}
-['target','balance','rUsd','rLira','pAttach','pProfit'].forEach(id=>$(id).addEventListener('input',debounced));
+['target','balance','rUsd','rLira','pAttach','pProfit','pComm'].forEach(id=>$(id).addEventListener('input',debounced));
 
-// старт с примером
+// модалка «Курсы и параметры»
+$('settingsBtn').onclick=()=>$('settingsModal').classList.add('open');
+$('modalClose').onclick=()=>$('settingsModal').classList.remove('open');
+$('settingsModal').onclick=e=>{if(e.target===$('settingsModal'))$('settingsModal').classList.remove('open');};
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('settingsModal').classList.remove('open');});
+
+buildChips();
 $('target').value=2000;
 calc();
 </script>
