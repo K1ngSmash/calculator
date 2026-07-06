@@ -115,6 +115,21 @@
 
   .foot{color:var(--faint);font-size:11.5px;line-height:1.6;margin-top:22px;padding:0 4px;max-width:920px}
   .foot b{color:var(--muted)}
+
+  .bundles-panel{margin-top:18px;padding:18px 20px}
+  .bundles-head{font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:15px}
+  .btable{width:100%;border-collapse:collapse}
+  .btable th{text-align:left;font-size:10.5px;color:var(--faint);text-transform:uppercase;letter-spacing:0.03em;font-weight:600;padding:0 12px 9px}
+  .btable th.r,.btable td.r{text-align:right}
+  .btable thead tr{border-bottom:1px solid var(--border)}
+  .btable td{padding:12px;border-bottom:1px solid var(--border);font-size:14px;vertical-align:middle}
+  .btable tbody tr:last-child td{border-bottom:none}
+  .btable tbody tr:hover{background:var(--surface)}
+  .btable .bname{font-weight:600}
+  .btable .bvb{font-size:11.5px;color:var(--faint);margin-top:3px}
+  .btable .lira{font-family:var(--mono);color:var(--money);font-weight:600}
+  .btable .cost{font-family:var(--mono);font-weight:600}
+  .btable .price{font-family:var(--mono);color:var(--profit);font-weight:700;font-size:15px}
 </style>
 </head>
 <body>
@@ -161,6 +176,11 @@
     <!-- ПРАВАЯ ПАНЕЛЬ -->
     <main class="panel results" id="out"></main>
   </div>
+
+  <section class="panel bundles-panel">
+    <div class="bundles-head">Готовые паки Fortnite · себес и цена при текущих курсах</div>
+    <div id="bundles"></div>
+  </section>
 
   <div class="foot">
     <b>Как считает:</b> кешбек 20% с суммы, оплаченной картой, тратится на следующую покупку. Пак «чуть меньше цели» + бесплатный хвост кешбеком = 1 платный шаг. Платный шаг = 1 активация карты + привязка + транзакция (банк снимает комиссию). Бесплатные шаги карту не трогают — комиссии нет. <b>Себестоимость</b> = лиры с карты × курс × (1 + комиссия банка) + привязка (твои затраты). <b>Цена клиенту</b> = себестоимость + маржа за каждый платный шаг (за сколько продаёшь). Разница = прибыль. Внутри — направленный поиск A*, возвращает минимальную по цене цепочку.
@@ -323,17 +343,42 @@ function render(res,resBase,target,bal,rateEff,comm,attach,profit){
     </div>`;
 }
 
+// ---------- готовые паки (фикс-цена, 1 транзакция) ----------
+const BUNDLES=[
+  {name:'Minty Legends Pack', tr:632, vb:1000},
+  {name:'Summer Legends Pack', tr:422, vb:0},
+  {name:'The Ace Pack', tr:190, vb:800},
+  {name:'Operation Brite Starter Pack', tr:105, vb:0},
+];
+function renderBundles(rateEff,attach,profit){
+  const rows=BUNDLES.map(b=>{
+    const cost=Math.round(b.tr*rateEff+attach);   // 1 транзакция = 1 привязка + комиссия
+    const price=Math.round(cost+profit);
+    const vbNote=b.vb>0?`<div class="bvb">внутри ${fmt(b.vb)} VB</div>`:'';
+    return `<tr>
+      <td><div class="bname">${b.name}</div>${vbNote}</td>
+      <td class="r lira">${b.tr} ₺</td>
+      <td class="r cost">${fmt(cost)} ₽</td>
+      <td class="r price">${fmt(price)} ₽</td>
+    </tr>`;
+  }).join('');
+  $('bundles').innerHTML=`<table class="btable">
+    <thead><tr><th>Пак</th><th class="r">Лира</th><th class="r">Себес</th><th class="r">Цена</th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+}
+
 let timer=null;
 function calc(){
   markChip();
   updateRateNote();
-  const target=parseInt($('target').value,10);
-  const bal=Math.max(0,parseFloat($('balance').value)||0);
   const attach=+$('pAttach').value, profit=+$('pProfit').value;
   const comm=Math.max(0,(+$('pComm').value)||0);
   const rt=rate();
   const rateEff=rt*(1+comm/100);           // лира по карте дороже на комиссию банка
+  renderBundles(rateEff,attach,profit);    // паки считаем всегда
   const STEP_PEN=(attach+profit)/rateEff;  // порог дробления с учётом комиссии
+  const target=parseInt($('target').value,10);
+  const bal=Math.max(0,parseFloat($('balance').value)||0);
   if(!(target>0)){emptyState();return;}
   const res=solve(target,bal,STEP_PEN);
   const resBase=bal>0?solve(target,0,STEP_PEN):null;
