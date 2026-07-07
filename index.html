@@ -406,10 +406,11 @@ function renderBundles(rateEff,attach){
 function render(res,resBase,target,bal,rateEff,comm,attach,profit,unit){
   const out=$('out');
   if(!res){out.innerHTML=`<div class="empty"><div class="big">✕</div><div>Не удалось собрать цепочку для этой суммы.</div></div>`;return;}
-  const {chain,steps,cardTRY,vb}=res;
-  const cost=Math.round(cardTRY*rateEff+attach*steps);
-  const price=Math.round(cost+profit*steps);
-  const profitTotal=price-cost;
+  const {chain,steps,cardTRY,vb}=res;                        // фактическая закупка (что реально покупаем)
+  const cost=Math.round(cardTRY*rateEff+attach*steps);        // фактический себес (с балансом клиента)
+  const baseCost=Math.round(resBase.cardTRY*rateEff+attach*resBase.steps); // себес без баланса
+  const price=Math.round(baseCost+profit*resBase.steps);      // ЦЕНА КЛИЕНТУ = фикс от базового сценария, баланс её не двигает
+  const profitTotal=price-cost;                              // прибыль = цена − фактический себес (базовая маржа + экономия с баланса)
   const bonus=vb-target;
 
   let flow='';
@@ -421,15 +422,12 @@ function render(res,resBase,target,bal,rateEff,comm,attach,profit,unit){
   });
 
   let noteHtml='';
-  if(bal>0 && resBase){
-    const costBase=Math.round(resBase.cardTRY*rateEff+attach*resBase.steps);
-    const saved=costBase-cost;
+  if(bal>0){
+    const saved=baseCost-cost;
     const stepDiff=resBase.steps-steps;
-    if(saved>0||stepDiff>0){
-      let parts=[];
-      if(stepDiff>0) parts.push(`<b>−${stepDiff} платный шаг</b>`);
-      if(saved>0) parts.push(`себес ниже на <b>${fmt(saved)} ₽</b>`);
-      noteHtml=`<div class="note save">Баланс ${fmt1(bal)} ₺ ушёл в дело: ${parts.join(', ')} против закупки без учёта баланса.</div>`;
+    if(saved>0){
+      const extra=stepDiff>0?` (−${stepDiff} платный шаг)`:'';
+      noteHtml=`<div class="note save">Баланс ${fmt1(bal)} ₺: цена клиенту та же, но твои затраты ниже на <b>${fmt(saved)} ₽</b>${extra} — это капнуло тебе <b>сверху</b> в этой сделке, товар не подешевел.</div>`;
     } else {
       noteHtml=`<div class="note plain">Баланс ${fmt1(bal)} ₺ учтён в оплате.</div>`;
     }
@@ -467,8 +465,8 @@ function calc(){
   const target=parseInt($('target').value,10);
   const bal=Math.max(0,parseFloat($('balance').value)||0);
   if(!(target>0)){emptyState();return;}
-  const res=solve(target,bal,STEP_PEN,cfg.packs,cfg.maxeff);
-  const resBase=bal>0?solve(target,0,STEP_PEN,cfg.packs,cfg.maxeff):null;
+  const resBase=solve(target,0,STEP_PEN,cfg.packs,cfg.maxeff);            // базовый сценарий -> фикс ЦЕНА
+  const res=bal>0?solve(target,bal,STEP_PEN,cfg.packs,cfg.maxeff):resBase; // факт закупки -> СЕБЕС
   render(res,resBase,target,bal,rateEff,comm,attach,profit,cfg.unit);
 }
 function debounced(){clearTimeout(timer);timer=setTimeout(calc,160);}
