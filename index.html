@@ -423,25 +423,32 @@ const BUNDLES=[
   {name:'Отряд Fortnite (Crew)', tr:79, vb:0, sub:'1000 VB/мес', cat:'Fortnite'},
   {name:'Discord Nitro · 1 мес', tr:105, vb:0, cat:'Подписки'},
   {name:'Discord Nitro · 12 мес', tr:1050, vb:0, cat:'Подписки'},
-  {name:'Spotify', tr:99, vb:0, cat:'Подписки'},
+  {name:'Spotify · Турция', tr:99, vb:0, cat:'Подписки'},
+  {name:'Individual · 1 мес', usd:2.05, vb:0, cat:'Spotify · Египет ($)'},
+  {name:'Individual · 3 мес', usd:5.65, vb:0, cat:'Spotify · Египет ($)'},
+  {name:'Individual · 6 мес', usd:10.45, vb:0, cat:'Spotify · Египет ($)'},
+  {name:'Individual · 12 мес', usd:20, vb:0, cat:'Spotify · Египет ($)'},
 ];
-function renderBundles(rateEff,attach){
+function renderBundles(rateEff,attach,usdRaw){
   $('bundlesHead').textContent='Готовые товары · себестоимость при текущих курсах';
   const cats=[...new Set(BUNDLES.map(b=>b.cat))];
   let html='';
   for(const cat of cats){
     const rows=BUNDLES.filter(b=>b.cat===cat).map(b=>{
-      const cost=Math.round(b.tr*rateEff+attach);
+      const isUsd=b.usd!==undefined;
+      // долларовые (готовый товар у поставщика) — чистый курс доллара, без комиссии банка и без привязки
+      const cost=isUsd ? Math.round(b.usd*usdRaw) : Math.round(b.tr*rateEff+attach);
+      const priceStr=isUsd?`${b.usd%1===0?b.usd:b.usd.toFixed(2)} $`:`${b.tr} ₺`;
       const sub=b.sub?b.sub:(b.vb>0?`внутри ${fmt(b.vb)} VB`:'');
       const subHtml=sub?`<div class="bvb">${sub}</div>`:'';
       return `<tr>
         <td><div class="bname">${b.name}</div>${subHtml}</td>
-        <td class="r lira">${b.tr} ₺</td>
+        <td class="r lira">${priceStr}</td>
         <td class="r cost">${fmt(cost)} ₽</td>
       </tr>`;
     }).join('');
     html+=`<div class="bcat">${cat}</div><table class="btable">
-      <thead><tr><th>Товар</th><th class="r">Лира</th><th class="r">Себес</th></tr></thead>
+      <thead><tr><th>Товар</th><th class="r">Цена</th><th class="r">Себес</th></tr></thead>
       <tbody>${rows}</tbody></table>`;
   }
   $('bundles').innerHTML=html;
@@ -504,7 +511,8 @@ function calc(){
   const comm=Math.max(0,(+$('pComm').value)||0);
   const rt=rate();
   const rateEff=rt*(1+comm/100);
-  renderBundles(rateEff,attach);
+  const usdRaw=(+$('rUsd').value)||0;   // чистый курс доллара для готовых долларовых товаров (без комиссии/привязки)
+  renderBundles(rateEff,attach,usdRaw);
   const STEP_PEN=(attach+profit)/rateEff;
   const target=parseInt($('target').value,10);
   const bal=Math.max(0,parseFloat($('balance').value)||0);
