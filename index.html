@@ -95,19 +95,19 @@
   .empty .big{font-size:38px;opacity:.5;font-family:var(--mono)}
 
   .headline{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+  .headline.solo{grid-template-columns:1fr}
+  .headline.solo .stat-big{border-color:rgba(88,140,255,.3);background:linear-gradient(180deg,rgba(88,140,255,.06),transparent)}
+  .headline.solo .stat-big .v{font-size:38px}
   .stat-big{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:16px 17px}
   .stat-big .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;font-weight:600}
   .stat-big .v{font-family:var(--mono);font-size:31px;font-weight:700;margin-top:6px;letter-spacing:-0.01em;line-height:1}
   .stat-big .v small{font-size:16px;font-weight:500;color:var(--faint);margin-left:3px}
   .stat-big .cap{font-size:11.5px;color:var(--faint);margin-top:7px}
-  .stat-big.price{border-color:rgba(61,220,151,.35);background:linear-gradient(180deg,rgba(61,220,151,.06),transparent)}
-  .stat-big.price .v{color:var(--profit)}
-  .stat-big.price .cap{color:#6fbf9c}
 
-  .profit-strip{display:flex;align-items:center;justify-content:space-between;
+  .perk-strip{display:flex;align-items:center;justify-content:space-between;
     background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:11px 15px;margin-bottom:16px}
-  .profit-strip .lab{font-size:12px;color:var(--muted)}
-  .profit-strip .val{font-family:var(--mono);font-size:17px;font-weight:650;color:var(--profit)}
+  .perk-strip .lab{font-size:12px;color:var(--muted)}
+  .perk-strip .val{font-family:var(--mono);font-size:17px;font-weight:650;color:var(--money)}
 
   .stat-row{display:flex;gap:10px;margin-bottom:20px}
   .stat-sm{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 12px;text-align:center}
@@ -234,7 +234,7 @@
   </section>
 
   <div class="foot">
-    <b>Как считает:</b> кешбек 20% с суммы, оплаченной картой, тратится на следующую покупку. Пак «чуть меньше цели» + бесплатный хвост кешбеком = 1 платный шаг. Платный шаг = 1 активация карты + привязка + транзакция (банк снимает комиссию). Бесплатные шаги карту не трогают. <b>Себестоимость</b> = валюта с карты × курс × (1 + комиссия банка) + привязка (твои затраты). <b>Цена клиенту</b> = себестоимость + маржа за каждый платный шаг. Разница = прибыль. Внутри — направленный поиск A*, обходит ценовые ловушки магазина и возвращает минимальную по цене цепочку.
+    <b>Как считает:</b> кешбек с суммы, оплаченной картой (Fortnite и Rocket League — 20%, Dead by Daylight — 5%), копится в общий пул и автоматически списывается на каждую следующую покупку. Пак «чуть меньше цели» + бесплатный хвост кешбеком = меньше платных шагов. Платный шаг = реальное списание с карты (привязка + комиссия банка); бесплатные шаги карту не трогают и <b>не идут в лимит Epic 6 оплат/день</b>. <b>Себестоимость</b> = валюта с карты × курс × (1 + комиссия банка) + привязка за каждый платный шаг. Внутри — направленный поиск A* с отсечкой по доминированию: обходит ценовые ловушки магазина и минимизирует затраты при минимуме оплат картой.
   </div>
 
   <div class="modal-back" id="settingsModal">
@@ -244,13 +244,15 @@
         <button class="modal-x" id="modalClose">×</button>
       </div>
       <div class="rates-grid">
-        <div class="mini"><label>Доллар, ₽</label><input type="number" id="rUsd" value="83.5" step="0.1"></div>
-        <div class="mini"><label>Лира за $</label><input type="number" id="rLira" value="48" step="0.5"></div>
+        <div class="mini"><label>Доллар, ₽</label><input type="number" id="rUsd" value="80.5" step="0.1"></div>
+        <div class="mini"><label>Наценка на $, %</label><input type="number" id="pUsdFee" value="3" step="0.5"></div>
+        <div class="mini"><label>Лира за $</label><input type="number" id="rLira" value="48.5" step="0.5"></div>
         <div class="mini"><label>Привязка, ₽/шаг</label><input type="number" id="pAttach" value="50" step="1"></div>
-        <div class="mini"><label>Маржа игр, ₽/шаг</label><input type="number" id="pProfit" value="300" step="10"></div>
-        <div class="mini" style="grid-column:1/-1"><label>Комиссия банка за транзакцию, %</label><input type="number" id="pComm" value="8" step="0.5"></div>
+        <div class="mini"><label>Штраф за шаг, ₽</label><input type="number" id="pProfit" value="300" step="10"></div>
+        <div class="mini"><label>Комиссия банка, %</label><input type="number" id="pComm" value="8" step="0.5"></div>
       </div>
       <div class="rate-note" id="rateNote"></div>
+      <div class="hint" style="margin-top:11px">«Штраф за шаг» — не деньги, а вес транзакции для солвера: чем он выше, тем сильнее солвер жмётся к меньшему числу оплат картой (лимит Epic — 6/день на аккаунт), даже ценой пары лишних лир.</div>
     </div>
   </div>
 </div>
@@ -280,11 +282,11 @@ const PACKS_RL=reducePacks(RL_RAW,[500,1100,3000,6500]);   // плато 1100-29
 const PACKS_DBD=reducePacks(DBD_RAW,[]);
 
 const CURR={
-  vb:{name:'V-Bucks', unit:'VB', packs:PACKS_VB, maxeff:maxEff(PACKS_VB),
+  vb:{name:'V-Bucks', unit:'VB', packs:PACKS_VB, maxeff:maxEff(PACKS_VB), cb:0.20,
       chips:[200,300,500,800,1000,1200,1300,1500,1600,1800,1900,2000,2100,2400,2600,2800,3200,3800,4500,5000,5300,5600,6000,6900,7800,9000,10000,12500,13500,25000,27000,37500,40500], bundles:true},
-  rl:{name:'RL Credits', unit:'cr', packs:PACKS_RL, maxeff:maxEff(PACKS_RL),
+  rl:{name:'RL Credits', unit:'cr', packs:PACKS_RL, maxeff:maxEff(PACKS_RL), cb:0.20,
       chips:[500,700,1100,3000,6500,15000], bundles:false},
-  dbd:{name:'DBD Cells', unit:'клеток', packs:PACKS_DBD, maxeff:maxEff(PACKS_DBD),
+  dbd:{name:'DBD Cells', unit:'клеток', packs:PACKS_DBD, maxeff:maxEff(PACKS_DBD), cb:0.05,
       chips:[500,1100,2250,4025,6000,12500], bundles:false},
 };
 let CUR='vb';
@@ -306,9 +308,10 @@ const r1=x=>Math.round(x*10)/10;
 
 // ================= СОЛВЕР A* (модель ПУЛА + отсечка по доминированию) =================
 const EPS_OVER=0.001,EPS_PK=0.0001;
-function solve(target,bal,STEP_PEN,PACKS,MAXEFF,over=1500,depth=30,maxnodes=200000){
+function solve(target,bal,STEP_PEN,PACKS,MAXEFF,CB,over=1500,depth=30,maxnodes=200000){
   if(!(target>0)) return null;
-  const h=(vb,pool)=>{const need=target-vb;return need<=0?0:Math.max(0,(need/MAXEFF-pool)/1.2);};
+  const cb=(CB===undefined?0.2:CB), K=1+cb;   // ставка кешбека валюты (Fortnite/RL 20%, DBD 5%)
+  const h=(vb,pool)=>{const need=target-vb;return need<=0?0:Math.max(0,(need/MAXEFF-pool)/K);};
   // --- жадная верхняя граница (паки по эффективности VB/лира) ---
   const byEff=PACKS.slice().sort((a,b)=>(b[0]/b[1])-(a[0]/a[1]));
   let gp=bal,gvb=0,gcard=0,gsteps=0,gchain=[],gi=0;
@@ -317,7 +320,7 @@ function solve(target,bal,STEP_PEN,PACKS,MAXEFF,over=1500,depth=30,maxnodes=2000
     const rem=target-gvb; let pk=null;
     for(const p of byEff){ if(p[0]<=rem){pk=p;break;} }
     if(!pk) pk=byEff.reduce((m,p)=>p[0]<m[0]?p:m,byEff[0]);
-    const use=Math.min(gp,pk[1]),c=pk[1]-use; gp=gp-use+c*0.2;
+    const use=Math.min(gp,pk[1]),c=pk[1]-use; gp=gp-use+c*cb;
     if(c>1e-6){gcard+=c;gsteps++;} gvb+=pk[0]; gchain.push([pk[0],c]);
   }
   const UB = gvb>=target ? gcard+STEP_PEN*gsteps+0.01 : Infinity;
@@ -349,9 +352,9 @@ function solve(target,bal,STEP_PEN,PACKS,MAXEFF,over=1500,depth=30,maxnodes=2000
     for(const pk of PACKS){
       const pvb=pk[0],pt=pk[1],nvb=vb+pvb;
       if(nvb>target+over) continue;
-      const use=Math.min(pool,pt),card=pt-use,npool=pool-use+card*0.2;
+      const use=Math.min(pool,pt),card=pt-use,npool=pool-use+card*cb;
       const ns=steps+(card>1e-6?1:0),ntp=ctp+card,cg=ntp+STEP_PEN*ns;
-      const need0=target-nvb;const baseH=need0<=0?0:Math.max(0,(need0/MAXEFF-npool)/1.2);
+      const need0=target-nvb;const baseH=need0<=0?0:Math.max(0,(need0/MAXEFF-npool)/K);
       const nf=cg+EPS_OVER*nvb+EPS_PK*(nd[6]+1)+baseH+(need0>0?EPS_OVER*need0:0);
       if(nf>=UB) continue;
       if(domd(nvb,npool,cg)) continue;
@@ -385,13 +388,14 @@ function switchCurr(c){
 }
 document.querySelectorAll('.ctab').forEach(b=>b.onclick=()=>switchCurr(b.dataset.c));
 
-function rate(){return (+$('rUsd').value)/(+$('rLira').value);}
+function usdEff(){return (+$('rUsd').value)*(1+((+$('pUsdFee').value)||0)/100);}  // доллар с наценкой обменника
+function rate(){return usdEff()/(+$('rLira').value);}
 function updateRateNote(){
   const rt=rate(), rt4=Math.round(rt*10000)/10000;
-  const step=Math.round((+$('pAttach').value)+(+$('pProfit').value));
   const comm=(+$('pComm').value)||0;
-  $('rateNote').innerHTML=`<span>1 ₺ = <b>${rt4}</b> ₽</span><span class="sep">шаг +${step} ₽</span>`;
-  const ps=$('pillSummary'); if(ps) ps.innerHTML=`1 ₺ = <b>${rt4}</b> ₽ · +${step} ₽/шаг · ${comm}%`;
+  const usd=Math.round(usdEff()*100)/100;
+  $('rateNote').innerHTML=`<span>1 ₺ = <b>${rt4}</b> ₽</span><span class="sep">$ = ${usd} ₽</span>`;
+  const ps=$('pillSummary'); if(ps) ps.innerHTML=`1 ₺ = <b>${rt4}</b> ₽ · $ ${usd} ₽ · банк ${comm}%`;
 }
 function markChip(){
   const v=+$('target').value;
@@ -454,20 +458,19 @@ function renderBundles(rateEff,attach,usdRaw){
   $('bundles').innerHTML=html;
 }
 
-function render(res,resBase,target,bal,rateEff,comm,attach,profit,unit){
+function render(res,resBase,target,bal,rateEff,comm,attach,profit,unit,cb){
   const out=$('out');
   if(!res){out.innerHTML=`<div class="empty"><div class="big">✕</div><div>Не удалось собрать цепочку для этой суммы.</div></div>`;return;}
-  const {chain,steps,cardTRY,vb}=res;                        // фактическая закупка (что реально покупаем)
-  const cost=Math.round(cardTRY*rateEff+attach*steps);        // фактический себес (с балансом клиента)
+  const {chain,steps,cardTRY,vb}=res;                        // фактическая закупка
+  const cost=Math.round(cardTRY*rateEff+attach*steps);        // себес (с балансом клиента, если есть)
   const baseCost=Math.round(resBase.cardTRY*rateEff+attach*resBase.steps); // себес без баланса
-  const price=Math.round(baseCost+profit*resBase.steps);      // ЦЕНА КЛИЕНТУ = фикс от базового сценария, баланс её не двигает
-  const profitTotal=price-cost;                              // прибыль = цена − фактический себес (базовая маржа + экономия с баланса)
   const bonus=vb-target;
+  const per1k=vb>0?cost/vb*1000:0;
 
   let flow='';
   chain.forEach((pair,i)=>{
     const [pvb,card]=pair;
-    const cbEarned=Math.round(card*0.2*10)/10;
+    const cbEarned=Math.round(card*cb*10)/10;
     if(i>0) flow+=`<div class="connector"><div class="line"></div></div>`;
     flow+=stepRow(pvb,card,cbEarned,unit);
   });
@@ -477,8 +480,8 @@ function render(res,resBase,target,bal,rateEff,comm,attach,profit,unit){
     const saved=baseCost-cost;
     const stepDiff=resBase.steps-steps;
     if(saved>0){
-      const extra=stepDiff>0?` (−${stepDiff} платный шаг)`:'';
-      noteHtml=`<div class="note save">Баланс ${fmt1(bal)} ₺: цена клиенту та же, но твои затраты ниже на <b>${fmt(saved)} ₽</b>${extra} — это капнуло тебе <b>сверху</b> в этой сделке, товар не подешевел.</div>`;
+      const extra=stepDiff>0?`, платных шагов на ${stepDiff} меньше`:'';
+      noteHtml=`<div class="note save">Баланс ${fmt1(bal)} ₺ ушёл в дело: себес ниже на <b>${fmt(saved)} ₽</b>${extra} (без баланса вышло бы ${fmt(baseCost)} ₽).</div>`;
     } else {
       noteHtml=`<div class="note plain">Баланс ${fmt1(bal)} ₺ учтён в оплате.</div>`;
     }
@@ -486,16 +489,15 @@ function render(res,resBase,target,bal,rateEff,comm,attach,profit,unit){
 
   out.innerHTML=`
     <div class="res-pad">
-      <div class="headline">
-        <div class="stat-big"><div class="k">Себестоимость</div><div class="v">${fmt(cost)}<small>₽</small></div><div class="cap">затраты · вкл. ${comm>0?comm+'% банк':'без комиссии'}</div></div>
-        <div class="stat-big price"><div class="k">Цена клиенту</div><div class="v">${fmt(price)}<small>₽</small></div><div class="cap">за сколько продаёшь</div></div>
+      <div class="headline solo">
+        <div class="stat-big"><div class="k">Себестоимость</div><div class="v">${fmt(cost)}<small>₽</small></div><div class="cap">затраты · вкл. ${comm>0?comm+'% банк':'без комиссии'} · привязка ${fmt(attach*steps)} ₽ · кешбек ${Math.round(cb*100)}%</div></div>
       </div>
-      <div class="profit-strip"><span class="lab">Прибыль в кармане</span><span class="val">+${fmt(profitTotal)} ₽</span></div>
       <div class="stat-row">
-        <div class="stat-sm"><div class="k">Платных шагов</div><div class="v">${steps}</div></div>
+        <div class="stat-sm"><div class="k">Оплат картой</div><div class="v">${steps}<div class="bonus">лимит Epic 6/день</div></div></div>
         <div class="stat-sm"><div class="k">С карты</div><div class="v money">${fmt1(cardTRY)} ₺</div></div>
         <div class="stat-sm"><div class="k">Выдаём</div><div class="v">${fmt(vb)}${bonus>0?`<div class="bonus">+${fmt(bonus)} бонус</div>`:''}</div></div>
       </div>
+      <div class="perk-strip"><span class="lab">Себес за 1000 ${unit}</span><span class="val">${fmt(per1k)} ₽</span></div>
       <div class="steps-h">Шаги покупки</div>
       <div class="flow">${flow}</div>
       ${noteHtml}
@@ -511,18 +513,18 @@ function calc(){
   const comm=Math.max(0,(+$('pComm').value)||0);
   const rt=rate();
   const rateEff=rt*(1+comm/100);
-  const usdRaw=(+$('rUsd').value)||0;   // чистый курс доллара для готовых долларовых товаров (без комиссии/привязки)
+  const usdRaw=usdEff();   // эффективный курс доллара (базовый + наценка обменника), для готовых долларовых товаров без комиссии/привязки
   renderBundles(rateEff,attach,usdRaw);
   const STEP_PEN=(attach+profit)/rateEff;
   const target=parseInt($('target').value,10);
   const bal=Math.max(0,parseFloat($('balance').value)||0);
   if(!(target>0)){emptyState();return;}
-  const resBase=solve(target,0,STEP_PEN,cfg.packs,cfg.maxeff);            // базовый сценарий -> фикс ЦЕНА
-  const res=bal>0?solve(target,bal,STEP_PEN,cfg.packs,cfg.maxeff):resBase; // факт закупки -> СЕБЕС
-  render(res,resBase,target,bal,rateEff,comm,attach,profit,cfg.unit);
+  const resBase=solve(target,0,STEP_PEN,cfg.packs,cfg.maxeff,cfg.cb);            // база (без баланса) для сравнения
+  const res=bal>0?solve(target,bal,STEP_PEN,cfg.packs,cfg.maxeff,cfg.cb):resBase; // фактическая закупка
+  render(res,resBase,target,bal,rateEff,comm,attach,profit,cfg.unit,cfg.cb);
 }
 function debounced(){clearTimeout(timer);timer=setTimeout(calc,160);}
-['target','balance','rUsd','rLira','pAttach','pProfit','pComm'].forEach(id=>$(id).addEventListener('input',debounced));
+['target','balance','rUsd','pUsdFee','rLira','pAttach','pProfit','pComm'].forEach(id=>$(id).addEventListener('input',debounced));
 
 // модалка «Курсы и параметры»
 $('settingsBtn').onclick=()=>$('settingsModal').classList.add('open');
