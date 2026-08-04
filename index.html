@@ -158,6 +158,7 @@
   .btable tbody tr:last-child td{border-bottom:none}
   .btable tbody tr:hover{background:var(--surface)}
   .btable .bname{font-weight:600}
+  .bcard{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--money);border:1px solid rgba(244,185,66,.35);border-radius:5px;padding:1px 5px;margin-left:6px;vertical-align:middle}
   .btable .bvb{font-size:11.5px;color:var(--faint);margin-top:3px}
   .btable .lira{font-family:var(--mono);color:var(--money);font-weight:600}
   .btable .cost{font-family:var(--mono);font-weight:600}
@@ -248,15 +249,15 @@
         <button class="modal-x" id="modalClose">×</button>
       </div>
       <div class="rates-grid">
-        <div class="mini"><label>Доллар, ₽</label><input type="number" id="rUsd" value="80.5" step="0.1"></div>
+        <div class="mini"><label>Доллар, ₽</label><input type="number" id="rUsd" value="83" step="0.1"></div>
         <div class="mini"><label>Наценка на $, %</label><input type="number" id="pUsdFee" value="3" step="0.5"></div>
-        <div class="mini"><label>Лира за $</label><input type="number" id="rLira" value="48.5" step="0.5"></div>
-        <div class="mini"><label>Привязка, ₽/шаг</label><input type="number" id="pAttach" value="50" step="1"></div>
-        <div class="mini"><label>Штраф за шаг, ₽</label><input type="number" id="pProfit" value="400" step="10"></div>
-        <div class="mini"><label>Комиссия банка, %</label><input type="number" id="pComm" value="8" step="0.5"></div>
+        <div class="mini"><label>Лира за $</label><input type="number" id="rLira" value="47.5" step="0.5"></div>
+        <div class="mini"><label>Активация карты, ₽</label><input type="number" id="pAttach" value="50" step="1"></div>
+        <div class="mini"><label>Штраф за шаг, ₽</label><input type="number" id="pProfit" value="0" step="10"></div>
+        <div class="mini"><label>Комиссия карты, %</label><input type="number" id="pComm" value="8" step="0.5"></div>
       </div>
       <div class="rate-note" id="rateNote"></div>
-      <div class="hint" style="margin-top:11px">«Штраф за шаг» — не деньги, а вес транзакции для солвера: чем он выше, тем сильнее солвер жмётся к меньшему числу оплат картой (лимит Epic — 6/день на аккаунт), даже ценой пары лишних лир.</div>
+      <div class="hint" style="margin-top:11px">Epic-валюта (V-Bucks/RL/DBD) и Fortnite Crew идут <b>переводом</b> — без комиссии и активации. «Комиссия карты» и «Активация карты» ложатся только на <b>карточные</b> товары (Nitro, Spotify Турция). «Штраф за шаг» — вес транзакции для солвера; при 0 он берёт минимум по цене (лимита на карты нет).</div>
     </div>
   </div>
 </div>
@@ -399,7 +400,7 @@ function updateRateNote(){
   const comm=(+$('pComm').value)||0;
   const usd=Math.round(usdEff()*100)/100;
   $('rateNote').innerHTML=`<span>1 ₺ = <b>${rt4}</b> ₽</span><span class="sep">$ = ${usd} ₽</span>`;
-  const ps=$('pillSummary'); if(ps) ps.innerHTML=`1 ₺ = <b>${rt4}</b> ₽ · $ ${usd} ₽ · банк ${comm}%`;
+  const ps=$('pillSummary'); if(ps) ps.innerHTML=`1 ₺ = <b>${rt4}</b> ₽ · $ ${usd} ₽ · ${comm>0?'карта +'+comm+'%':'без комиссии'}`;
 }
 function markChip(){
   const v=+$('target').value;
@@ -428,29 +429,34 @@ const BUNDLES=[
   {name:'Summer Legends Pack', tr:422, vb:0, cat:'Fortnite'},
   {name:'The Ace Pack', tr:190, vb:800, cat:'Fortnite'},
   {name:'Operation Brite Starter Pack', tr:105, vb:0, cat:'Fortnite'},
-  {name:'Отряд Fortnite (Crew)', tr:79, vb:0, sub:'1000 VB/мес', cat:'Fortnite'},
-  {name:'Discord Nitro · 1 мес', tr:105, vb:0, cat:'Подписки'},
-  {name:'Discord Nitro · 12 мес', tr:1050, vb:0, cat:'Подписки'},
-  {name:'Spotify · Турция', tr:99, vb:0, cat:'Подписки'},
+  {name:'Отряд Fortnite (Crew)', tr:79, vb:0, sub:'1000 VB/мес', cat:'Fortnite', card:true},
+  {name:'Discord Nitro · 1 мес', tr:105, vb:0, cat:'Подписки', card:true},
+  {name:'Discord Nitro · 12 мес', tr:1050, vb:0, cat:'Подписки', card:true},
+  {name:'Spotify · Турция', tr:99, vb:0, cat:'Подписки', card:true},
   {name:'Individual · 1 мес', usd:2.05, vb:0, cat:'Spotify · Египет ($)'},
   {name:'Individual · 3 мес', usd:5.65, vb:0, cat:'Spotify · Египет ($)'},
   {name:'Individual · 6 мес', usd:10.45, vb:0, cat:'Spotify · Египет ($)'},
   {name:'Individual · 12 мес', usd:20, vb:0, cat:'Spotify · Египет ($)'},
 ];
-function renderBundles(rateEff,attach,usdRaw){
+function renderBundles(rtTransfer,rtCard,cardAct,usdRaw){
   $('bundlesHead').textContent='Готовые товары · себестоимость при текущих курсах';
   const cats=[...new Set(BUNDLES.map(b=>b.cat))];
   let html='';
   for(const cat of cats){
     const rows=BUNDLES.filter(b=>b.cat===cat).map(b=>{
       const isUsd=b.usd!==undefined;
-      // долларовые (готовый товар у поставщика) — чистый курс доллара, без комиссии банка и без привязки
-      const cost=isUsd ? Math.round(b.usd*usdRaw) : Math.round(b.tr*rateEff+attach);
+      // долларовые (готовые коды у поставщика) — чистый курс доллара, без карты
+      // карточные (Nitro, Spotify Турция) — комиссия карты + активация
+      // Epic-подписки (Crew) — перевод, чистый курс лиры
+      let cost, tag='';
+      if(isUsd){ cost=Math.round(b.usd*usdRaw); }
+      else if(b.card){ cost=Math.round(b.tr*rtCard+cardAct); tag=' <span class="bcard">карта</span>'; }
+      else { cost=Math.round(b.tr*rtTransfer); }
       const priceStr=isUsd?`${b.usd%1===0?b.usd:b.usd.toFixed(2)} $`:`${b.tr} ₺`;
       const sub=b.sub?b.sub:(b.vb>0?`внутри ${fmt(b.vb)} VB`:'');
       const subHtml=sub?`<div class="bvb">${sub}</div>`:'';
       return `<tr>
-        <td><div class="bname">${b.name}</div>${subHtml}</td>
+        <td><div class="bname">${b.name}${tag}</div>${subHtml}</td>
         <td class="r lira">${priceStr}</td>
         <td class="r cost">${fmt(cost)} ₽</td>
       </tr>`;
@@ -494,7 +500,7 @@ function render(res,resBase,target,bal,rateEff,comm,attach,unit,cb){
   out.innerHTML=`
     <div class="res-pad">
       <div class="headline solo">
-        <div class="stat-big"><div class="k">Себестоимость</div><div class="v">${fmt(cost)}<small>₽</small></div><div class="cap">затраты · вкл. ${comm>0?comm+'% банк':'без комиссии'} · привязка ${fmt(attach*steps)} ₽ · кешбек ${Math.round(cb*100)}%</div></div>
+        <div class="stat-big"><div class="k">Себестоимость</div><div class="v">${fmt(cost)}<small>₽</small></div><div class="cap">затраты · ${comm>0?'вкл. '+comm+'% банк':'без комиссии'}${attach*steps>0?' · привязка '+fmt(attach*steps)+' ₽':''} · кешбек ${Math.round(cb*100)}%</div></div>
       </div>
       <div class="stat-row">
         <div class="stat-sm"><div class="k">Оплат картой</div><div class="v">${steps}<div class="bonus">лимит Epic 6/день</div></div></div>
@@ -516,19 +522,20 @@ function calc(){
   markChip();
   updateRateNote();
   const cfg=CURR[CUR];
-  const attach=+$('pAttach').value, profit=+$('pProfit').value;
-  const comm=Math.max(0,(+$('pComm').value)||0);
-  const rt=rate();
-  const rateEff=rt*(1+comm/100);
-  const usdRaw=usdEff();   // эффективный курс доллара (базовый + наценка обменника), для готовых долларовых товаров без комиссии/привязки
-  renderBundles(rateEff,attach,usdRaw);
-  const STEP_PEN=(attach+profit)/rateEff;
+  const cardComm=Math.max(0,(+$('pComm').value)||0);   // комиссия карты (Nitro, Spotify Турция)
+  const cardAct=+$('pAttach').value;                    // активация карты, ₽ за карточную покупку
+  const profit=+$('pProfit').value;                     // штраф за шаг для солвера (Epic-валюта)
+  const rt=rate();                                      // чистый курс лиры — Epic идёт переводом, без издержек
+  const rateCard=rt*(1+cardComm/100);                   // курс лиры с комиссией карты
+  const usdRaw=usdEff();                                // курс доллара (для готовых долларовых кодов)
+  renderBundles(rt,rateCard,cardAct,usdRaw);
+  const STEP_PEN=profit/rt;                             // Epic: только штраф за шаг (перевод, без активации)
   const target=parseInt($('target').value,10);
   const bal=Math.max(0,parseFloat($('balance').value)||0);
   if(!(target>0)){emptyState();return;}
   const resBase=solve(target,0,STEP_PEN,cfg.packs,cfg.maxeff,cfg.cb);            // база (без баланса) для сравнения
   const res=bal>0?solve(target,bal,STEP_PEN,cfg.packs,cfg.maxeff,cfg.cb):resBase; // фактическая закупка
-  render(res,resBase,target,bal,rateEff,comm,attach,cfg.unit,cfg.cb);
+  render(res,resBase,target,bal,rt,0,0,cfg.unit,cfg.cb);                          // Epic-валюта: перевод, комиссия 0, активация 0
 }
 function debounced(){clearTimeout(timer);timer=setTimeout(calc,160);}
 ['target','balance','rUsd','pUsdFee','rLira','pAttach','pProfit','pComm'].forEach(id=>$(id).addEventListener('input',debounced));
