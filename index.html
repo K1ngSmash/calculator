@@ -249,15 +249,16 @@
         <button class="modal-x" id="modalClose">×</button>
       </div>
       <div class="rates-grid">
-        <div class="mini"><label>Доллар, ₽</label><input type="number" id="rUsd" value="83" step="0.1"></div>
+        <div class="mini"><label>Доллар, ₽</label><input type="number" id="rUsd" value="84.3" step="0.1"></div>
         <div class="mini"><label>Наценка на $, %</label><input type="number" id="pUsdFee" value="3" step="0.5"></div>
-        <div class="mini"><label>Лира за $</label><input type="number" id="rLira" value="47.5" step="0.5"></div>
+        <div class="mini"><label>Лира за $</label><input type="number" id="rLira" value="47" step="0.5"></div>
         <div class="mini"><label>Активация карты, ₽</label><input type="number" id="pAttach" value="50" step="1"></div>
-        <div class="mini"><label>Штраф за шаг, ₽</label><input type="number" id="pProfit" value="0" step="10"></div>
+        <div class="mini"><label>Мин. выгода на шаг, ₽</label><input type="number" id="stepGain" value="10" step="5"></div>
         <div class="mini"><label>Комиссия карты, %</label><input type="number" id="pComm" value="8" step="0.5"></div>
+        <div class="mini"><label>Макс. покупок</label><input type="number" id="maxSteps" value="5" step="1" min="1"></div>
       </div>
       <div class="rate-note" id="rateNote"></div>
-      <div class="hint" style="margin-top:11px">Epic-валюта (V-Bucks/RL/DBD) и Fortnite Crew идут <b>переводом</b> — без комиссии и активации. «Комиссия карты» и «Активация карты» ложатся только на <b>карточные</b> товары (Nitro, Spotify Турция). «Штраф за шаг» — вес транзакции для солвера; при 0 он берёт минимум по цене (лимита на карты нет).</div>
+      <div class="hint" style="margin-top:11px">Epic-валюта (V-Bucks/RL/DBD) и разовые паки Fortnite идут <b>переводом</b> — без комиссии и активации. «Комиссия карты» и «Активация карты» — только для <b>карточных</b> товаров (Nitro, Crew, Spotify Турция). «Макс. покупок» — потолок числа покупок в цепочке. «Мин. выгода на шаг» — не добавлять покупку, если она экономит меньше этой суммы (0 = собирать абсолютный минимум по цене, даже ценой лишних покупок).</div>
     </div>
   </div>
 </div>
@@ -267,7 +268,7 @@
 // V-Bucks (VB -> ₺)
 const VB_RAW=[[50,21],[100,42],[150,63],[200,84],[250,105],[300,126],[350,148],[400,169],[450,179],[500,179],[550,179],[600,179],[650,179],[700,179],[750,179],[800,190],[850,211],[900,232],[950,253],[1050,295],[1100,316],[1150,337],[1200,359],[1250,380],[1300,401],[1350,422],[1400,443],[1450,464],[1500,475],[1550,475],[1600,475],[1650,475],[1700,475],[1750,475],[1800,475],[1850,475],[1900,475],[1950,475],[2000,475],[2050,475],[2100,475],[2150,475],[2200,475],[2250,475],[2300,475],[2350,475],[2400,485],[2450,506],[2500,527],[2550,548],[2600,569],[2650,590],[2700,611],[2750,632],[2850,675],[2900,696],[2950,717],[3000,738],[3050,759],[3100,770],[3200,770],[3300,770],[3400,770],[3500,770],[3600,770],[3700,770],[3800,770],[3900,770],[4000,770],[4100,770],[4200,770],[4300,770],[4400,770],[4450,770],[4500,780],[4550,801],[4600,822],[4650,843],[4700,864],[4750,885],[4800,906],[4850,927],[4900,948],[4950,969],[12500,1898]];
 // Rocket League Credits (cr -> ₺) — с ценовыми аномалиями магазина
-const RL_RAW={50:10,100:21,150:31,200:42,250:52,300:63,350:73,400:84,450:94,500:105,900:172,1000:182,1100:211,1200:211,1400:211,1600:211,1800:211,2000:211,2100:211,2300:211,2400:211,2500:211,2800:211,2900:211,2950:211,3000:528,3200:240,3500:319,3800:397,3900:417,6500:1056};
+const RL_RAW={50:10,100:21,150:32,200:42,250:53,300:63,350:73,400:84,450:95,500:105,600:126,700:137,800:158,900:179,1000:190,1100:211,1200:232,1400:264,1600:295,1800:337,2000:369,2100:380,2300:412,2400:433,2500:443,2800:485,2900:506,2950:517,3000:528,3200:548,3500:590,3800:632,3900:643,6500:1056};
 // DBD Auric Cells (клетки -> ₺)
 const DBD_RAW={500:124,1100:299,2250:599,4025:1049,6000:1299,12500:2599};
 
@@ -283,7 +284,7 @@ function reducePacks(raw, exacts){
 const maxEff=packs=>Math.max(...packs.map(p=>p[0]/p[1]));
 
 const PACKS_VB=reducePacks(VB_RAW,[500,1500,1600,1800,1900,2000,2100,3100,3200,3800]);
-const PACKS_RL=reducePacks(RL_RAW,[500,1100,3000,6500]);   // плато 1100-2950 схлопнуто до 2950 + точный 1100
+const PACKS_RL=reducePacks(RL_RAW,[500,1100,3000,6500]);   // цены обновлены: плато 211 и аномалия 3200 УБРАНЫ, теперь цена растёт ~линейно
 const PACKS_DBD=reducePacks(DBD_RAW,[]);
 
 const CURR={
@@ -328,8 +329,8 @@ function solve(target,bal,STEP_PEN,PACKS,MAXEFF,CB,over=1500,depth=30,maxnodes=2
     const use=Math.min(gp,pk[1]),c=pk[1]-use; gp=gp-use+c*cb;
     if(c>1e-6){gcard+=c;gsteps++;} gvb+=pk[0]; gchain.push([pk[0],c]);
   }
-  const UB = gvb>=target ? gcard+STEP_PEN*gsteps+0.01 : Infinity;
-  const greedyRes = gvb>=target ? {chain:gchain,steps:gsteps,cardTRY:gcard,vb:gvb,poolLeft:gp,nodes:0} : null;
+  const UB = (gvb>=target && gchain.length<=depth) ? gcard+STEP_PEN*gchain.length+0.01 : Infinity;
+  const greedyRes = (gvb>=target && gchain.length<=depth) ? {chain:gchain,steps:gsteps,cardTRY:gcard,vb:gvb,poolLeft:gp,nodes:0} : null;
   // --- A* с Pareto-фронтом + ε-доминирование (схлопываем почти-одинаковые состояния) ---
   const front=new Map();   // vb -> [[pool,g],...] недоминируемые
   const EPP=Math.max(1,target/12000),EPG=Math.max(1,target/12000);
@@ -351,14 +352,14 @@ function solve(target,bal,STEP_PEN,PACKS,MAXEFF,CB,over=1500,depth=30,maxnodes=2
     }
     if(nd[6]>=depth) continue;
     const pool=nd[3],steps=nd[4],ctp=nd[5];
-    const g=ctp+STEP_PEN*steps;
+    const g=ctp+STEP_PEN*nd[6];
     if(domd(vb,pool,g)) continue;
     addf(vb,pool,g);
     for(const pk of PACKS){
       const pvb=pk[0],pt=pk[1],nvb=vb+pvb;
       if(nvb>target+over) continue;
       const use=Math.min(pool,pt),card=pt-use,npool=pool-use+card*cb;
-      const ns=steps+(card>1e-6?1:0),ntp=ctp+card,cg=ntp+STEP_PEN*ns;
+      const ns=steps+(card>1e-6?1:0),ntp=ctp+card,cg=ntp+STEP_PEN*(nd[6]+1);
       const need0=target-nvb;const baseH=need0<=0?0:Math.max(0,(need0/MAXEFF-npool)/K);
       const nf=cg+EPS_OVER*nvb+EPS_PK*(nd[6]+1)+baseH+(need0>0?EPS_OVER*need0:0)-WPOOL*npool;
       if(nf>=UB) continue;
@@ -446,8 +447,8 @@ function renderBundles(rtTransfer,rtCard,cardAct,usdRaw){
     const rows=BUNDLES.filter(b=>b.cat===cat).map(b=>{
       const isUsd=b.usd!==undefined;
       // долларовые (готовые коды у поставщика) — чистый курс доллара, без карты
-      // карточные (Nitro, Spotify Турция) — комиссия карты + активация
-      // Epic-подписки (Crew) — перевод, чистый курс лиры
+      // карточные (Nitro, Fortnite Crew, Spotify Турция) — комиссия карты + активация
+      // разовые паки Epic (Minty/Summer/Ace…) — перевод, чистый курс лиры
       let cost, tag='';
       if(isUsd){ cost=Math.round(b.usd*usdRaw); }
       else if(b.card){ cost=Math.round(b.tr*rtCard+cardAct); tag=' <span class="bcard">карта</span>'; }
@@ -468,7 +469,7 @@ function renderBundles(rtTransfer,rtCard,cardAct,usdRaw){
   $('bundles').innerHTML=html;
 }
 
-function render(res,resBase,target,bal,rateEff,comm,attach,unit,cb){
+function render(res,resBase,target,bal,rateEff,comm,attach,unit,cb,maxSteps){
   const out=$('out');
   if(!res){out.innerHTML=`<div class="empty"><div class="big">✕</div><div>Не удалось собрать цепочку для этой суммы.</div></div>`;return;}
   const {chain,steps,cardTRY,vb,poolLeft}=res;               // фактическая закупка
@@ -497,14 +498,18 @@ function render(res,resBase,target,bal,rateEff,comm,attach,unit,cb){
     }
   }
 
+  if(chain.length>maxSteps){
+    noteHtml=`<div class="note plain" style="border-color:rgba(230,165,77,.45)">Эта сумма не помещается в ${maxSteps} покупок — нужно минимум <b>${chain.length}</b>. Подними «Макс. покупок» в настройках или уменьши сумму.</div>`+noteHtml;
+  }
+
   out.innerHTML=`
     <div class="res-pad">
       <div class="headline solo">
-        <div class="stat-big"><div class="k">Себестоимость</div><div class="v">${fmt(cost)}<small>₽</small></div><div class="cap">затраты · ${comm>0?'вкл. '+comm+'% банк':'без комиссии'}${attach*steps>0?' · привязка '+fmt(attach*steps)+' ₽':''} · кешбек ${Math.round(cb*100)}%</div></div>
+        <div class="stat-big"><div class="k">Себестоимость</div><div class="v">${fmt(cost)}<small>₽</small></div><div class="cap">${fmt1(cardTRY)} ₺ переводом · ${comm>0?'вкл. '+comm+'% банк':'без комиссии'}${attach*steps>0?' · привязка '+fmt(attach*steps)+' ₽':''} · кешбек ${Math.round(cb*100)}%</div></div>
       </div>
       <div class="stat-row">
-        <div class="stat-sm"><div class="k">Оплат картой</div><div class="v">${steps}<div class="bonus">лимит Epic 6/день</div></div></div>
-        <div class="stat-sm"><div class="k">С карты</div><div class="v money">${fmt1(cardTRY)} ₺</div></div>
+        <div class="stat-sm"><div class="k">Покупок</div><div class="v">${chain.length}<div class="bonus"${chain.length>maxSteps?' style="color:#e6a54d"':''}>${chain.length>maxSteps?'выше лимита '+maxSteps:'лимит '+maxSteps}</div></div></div>
+        <div class="stat-sm"><div class="k">Из них беспл.</div><div class="v money">${chain.length-steps}<div class="bonus">кешбеком</div></div></div>
         <div class="stat-sm"><div class="k">Выдаём</div><div class="v">${fmt(vb)}${bonus>0?`<div class="bonus">+${fmt(bonus)} бонус</div>`:''}</div></div>
       </div>
       <div class="perk-2col">
@@ -524,21 +529,27 @@ function calc(){
   const cfg=CURR[CUR];
   const cardComm=Math.max(0,(+$('pComm').value)||0);   // комиссия карты (Nitro, Spotify Турция)
   const cardAct=+$('pAttach').value;                    // активация карты, ₽ за карточную покупку
-  const profit=+$('pProfit').value;                     // штраф за шаг для солвера (Epic-валюта)
   const rt=rate();                                      // чистый курс лиры — Epic идёт переводом, без издержек
   const rateCard=rt*(1+cardComm/100);                   // курс лиры с комиссией карты
   const usdRaw=usdEff();                                // курс доллара (для готовых долларовых кодов)
   renderBundles(rt,rateCard,cardAct,usdRaw);
-  const STEP_PEN=profit/rt;                             // Epic: только штраф за шаг (перевод, без активации)
+  const maxBuys=Math.max(1,parseInt($('maxSteps').value,10)||5);   // потолок числа покупок в цепочке
+  const stepGain=Math.max(0,(+$('stepGain').value)||0);            // ₽: не добавлять покупку, если экономит меньше
+  const STEP_PEN=stepGain/rt;                                      // тот же порог в лирах — штраф на каждую покупку
   const target=parseInt($('target').value,10);
   const bal=Math.max(0,parseFloat($('balance').value)||0);
   if(!(target>0)){emptyState();return;}
-  const resBase=solve(target,0,STEP_PEN,cfg.packs,cfg.maxeff,cfg.cb);            // база (без баланса) для сравнения
-  const res=bal>0?solve(target,bal,STEP_PEN,cfg.packs,cfg.maxeff,cfg.cb):resBase; // фактическая закупка
-  render(res,resBase,target,bal,rt,0,0,cfg.unit,cfg.cb);                          // Epic-валюта: перевод, комиссия 0, активация 0
+  const solveCap=(t,b)=>{                                // потолок покупок; если цель не влезла — плавно расширяем
+    let r=solve(t,b,STEP_PEN,cfg.packs,cfg.maxeff,cfg.cb,1500,maxBuys);
+    for(let d=maxBuys+1; d<=20 && !r; d++) r=solve(t,b,STEP_PEN,cfg.packs,cfg.maxeff,cfg.cb,1500,d);
+    return r;
+  };
+  const resBase=solveCap(target,0);            // база (без баланса) для сравнения
+  const res=bal>0?solveCap(target,bal):resBase; // фактическая закупка
+  render(res,resBase,target,bal,rt,0,0,cfg.unit,cfg.cb,maxBuys);   // Epic-валюта: перевод, комиссия 0, активация 0
 }
 function debounced(){clearTimeout(timer);timer=setTimeout(calc,160);}
-['target','balance','rUsd','pUsdFee','rLira','pAttach','pProfit','pComm'].forEach(id=>$(id).addEventListener('input',debounced));
+['target','balance','rUsd','pUsdFee','rLira','pAttach','stepGain','pComm','maxSteps'].forEach(id=>$(id).addEventListener('input',debounced));
 
 // модалка «Курсы и параметры»
 $('settingsBtn').onclick=()=>$('settingsModal').classList.add('open');
